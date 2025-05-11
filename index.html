@@ -43,7 +43,6 @@
         align-items: flex-start;
         word-spacing: 0.2rem;
         filter: drop-shadow(0 0 0.75rem rgb(112, 112, 112));
-        /* overflow: auto; */
       }
 
       .ui-text {
@@ -51,17 +50,45 @@
         user-select: none;
       }
 
-      .ui-close-btn {
+      .ui-close-btn, .spotify-btn {
         font-family: monogram, monospace;
         border-style: none;
         border-radius: 3px;
         padding: 1rem;
         font-size: inherit;
+        cursor: pointer;
+        margin: 0.5rem;
+      }
+
+      .spotify-btn {
+        background: #1db954; /* Spotify green */
+        color: white;
+      }
+
+      .spotify-btn:hover {
+        background: #1ed760;
       }
 
       .btn-container {
         align-self: flex-end;
         margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+      }
+
+      .spotify-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      #track-id-input {
+        font-family: monogram, monospace;
+        font-size: 1.5rem;
+        margin: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 3px;
+        border: 1px solid #ccc;
       }
 
       .note {
@@ -76,13 +103,26 @@
     <div id="app">
       <div>
         <p class="note">
-  Welcome to my portfolio!! If you just prefer GitHub, click <a href="https://github.com/tarunprabhu11">here.</a><br/>
+          Welcome to my portfolio!! If you just prefer GitHub, click <a href="https://github.com/tarunprabhu11">here</a>.<br/>
           Tap/Click around to move. <br/>
-          Interact with the yellow props to know me better but feel free to look around!</p>
+          Interact with the yellow props to know me better but feel free to look around!<br/>
+          Check out my Spotify integration below!
+        </p>
 
-        <div id="textbox-container" style="display: none">
+        <div id="textbox-container" style="display: block">
           <div id="textbox">
-            <p id="dialogue" class="ui-text"></p>
+            <p id="dialogue" class="ui-text">Click a Spotify button to see my music taste!</p>
+            <div class="spotify-controls">
+              <button class="spotify-btn" onclick="spotifyLogin()">Login to Spotify</button>
+              <button class="spotify-btn" onclick="getTopTracks()">Top Tracks</button>
+              <button class="spotify-btn" onclick="getNowPlaying()">Now Playing</button>
+              <button class="spotify-btn" onclick="getFollowedArtists()">Followed Artists</button>
+              <div>
+                <input id="track-id-input" type="text" placeholder="Enter Track ID" />
+                <button class="spotify-btn" onclick="playTrack()">Play Track</button>
+              </div>
+              <button class="spotify-btn" onclick="pausePlayback()">Pause</button>
+            </div>
             <div class="btn-container">
               <button id="close" class="ui-close-btn">Close</button>
             </div>
@@ -92,5 +132,106 @@
       <canvas id="game"></canvas>
     </div>
 
+    <script>
+      const apiBaseUrl = 'https://cactrobe-h5fteba4auc8dpfy.eastasia-01.azurewebsites.net/'; 
+      const dialogue = document.getElementById('dialogue');
+
+      function displayResponse(data (response) {
+        dialogue.textContent = JSON.stringify(response, null, 2);
+      }
+
+      function displayError (error) {
+        dialogue.textContent = `Error: ${error.message || JSON.stringify(error)}`;
+      }
+
+      async function spotifyLogin () {
+        try {
+          // Redirect to Spotify login
+          window.location.href = `${apiBaseUrl}/login`;
+        } catch (error) {
+          displayError(error);
+        }
+      }
+
+      async function getTopTracks () {
+        try {
+          const response = await fetch(`${apiBaseUrl}/top-tracks`);
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Failed to fetch top tracks');
+          displayResponse(data);
+        } catch (error) {
+          displayError(error);
+        }
+      }
+
+      async function getNowPlaying () {
+        try {
+          const response = await fetch(`${apiBaseUrl}/now-playing`);
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Failed to fetch now playing');
+          displayResponse(data);
+        } catch (error) {
+          displayError(error);
+        }
+      }
+
+      async function getFollowedArtists () {
+        try {
+          const response = await fetch(`${apiBaseUrl}/followed-artists`);
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Failed to fetch followed artists');
+          displayResponse(data);
+        } catch (error) {
+          displayError(error);
+        }
+      }
+
+      async function playTrack () {
+        try {
+          const trackId = document.getElementById('track-id-input').value.trim();
+          if (!trackId) throw new Error('Please enter a track ID');
+          const response = await fetch(`${apiBaseUrl}/play/${trackId}`, {
+            method: 'PUT'
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Failed to play track');
+          displayResponse(data);
+        } catch (error) {
+          displayError(error);
+        }
+      }
+
+      async function pausePlayback () {
+        try {
+          const response = await fetch(`${apiBaseUrl}/pause`, {
+            method: 'PUT'
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Failed to pause playback');
+          displayResponse(data);
+        } catch (error) {
+          displayError(error);
+        }
+      }
+
+      // Handle Spotify callback (if redirected back to the portfolio)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      if (code) {
+        fetch(`${apiBaseUrl}/callback?code=${code}`)
+          .then(response => response.json())
+          .then(data => {
+            displayResponse(data);
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          })
+          .catch(error => displayError(error));
+      }
+
+      // Close button functionality
+      document.getElementById('close').addEventListener('click', () => {
+        document.getElementById('textbox-container').style.display = 'none';
+      });
+    </script>
   </body>
 </html>
