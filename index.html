@@ -26,11 +26,15 @@
         position: relative;
       }
 
-      #textbox {
+      #textbox-container {
         position: absolute;
         left: 10%;
         right: 10%;
         bottom: 2vh;
+        transition: height 0.3s ease;
+      }
+
+      #textbox {
         min-height: 10vh;
         background: white;
         border-radius: 3px;
@@ -45,12 +49,20 @@
         filter: drop-shadow(0 0 0.75rem rgb(112, 112, 112));
       }
 
+      #textbox-container.minimized {
+        height: 4rem;
+      }
+
+      #textbox-container.minimized #textbox {
+        display: none;
+      }
+
       .ui-text {
         margin: 0;
         user-select: none;
       }
 
-      .ui-close-btn, .spotify-btn {
+      .ui-close-btn, .spotify-btn, .maximize-btn {
         font-family: monogram, monospace;
         border-style: none;
         border-radius: 3px;
@@ -67,6 +79,17 @@
 
       .spotify-btn:hover {
         background: #1ed760;
+      }
+
+      .maximize-btn {
+        background: #1db954;
+        color: white;
+        display: none;
+        width: 100%;
+      }
+
+      #textbox-container.minimized .maximize-btn {
+        display: block;
       }
 
       .btn-container {
@@ -109,7 +132,7 @@
           Check out my Spotify integration below!
         </p>
 
-        <div id="textbox-container" style="display: block">
+        <div id="textbox-container">
           <div id="textbox">
             <p id="dialogue" class="ui-text">Click a Spotify button to see my music taste!</p>
             <div class="spotify-controls">
@@ -127,33 +150,34 @@
               <button id="close" class="ui-close-btn">Close</button>
             </div>
           </div>
+          <button class="maximize-btn" onclick="maximizeTextbox()">Maximize</button>
         </div>
       </div>
       <canvas id="game"></canvas>
     </div>
 
     <script>
-      const apiBaseUrl = 'https://cactrobe-h5fteba4auc8dpfy.eastasia-01.azurewebsites.net/'; 
+      const apiBaseUrl = 'https://cactrobe-h5fteba4auc8dpfy.eastasia-01.azurewebsites.net/spotify'; 
       const dialogue = document.getElementById('dialogue');
+      const textboxContainer = document.getElementById('textbox-container');
 
-      function displayResponse(data (response) {
-        dialogue.textContent = JSON.stringify(response, null, 2);
+      function displayResponse(data) {
+        dialogue.textContent = JSON.stringify(data, null, 2);
       }
 
-      function displayError (error) {
+      function displayError(error) {
         dialogue.textContent = `Error: ${error.message || JSON.stringify(error)}`;
       }
 
-      async function spotifyLogin () {
+      async function spotifyLogin() {
         try {
-          // Redirect to Spotify login
           window.location.href = `${apiBaseUrl}/login`;
         } catch (error) {
           displayError(error);
         }
       }
 
-      async function getTopTracks () {
+      async function getTopTracks() {
         try {
           const response = await fetch(`${apiBaseUrl}/top-tracks`);
           const data = await response.json();
@@ -164,7 +188,7 @@
         }
       }
 
-      async function getNowPlaying () {
+      async function getNowPlaying() {
         try {
           const response = await fetch(`${apiBaseUrl}/now-playing`);
           const data = await response.json();
@@ -175,7 +199,7 @@
         }
       }
 
-      async function getFollowedArtists () {
+      async function getFollowedArtists() {
         try {
           const response = await fetch(`${apiBaseUrl}/followed-artists`);
           const data = await response.json();
@@ -186,7 +210,7 @@
         }
       }
 
-      async function playTrack () {
+      async function playTrack() {
         try {
           const trackId = document.getElementById('track-id-input').value.trim();
           if (!trackId) throw new Error('Please enter a track ID');
@@ -201,7 +225,7 @@
         }
       }
 
-      async function pausePlayback () {
+      async function pausePlayback() {
         try {
           const response = await fetch(`${apiBaseUrl}/pause`, {
             method: 'PUT'
@@ -214,7 +238,6 @@
         }
       }
 
-      // Handle Spotify callback (if redirected back to the portfolio)
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       if (code) {
@@ -222,16 +245,18 @@
           .then(response => response.json())
           .then(data => {
             displayResponse(data);
-            // Clean up URL
             window.history.replaceState({}, document.title, window.location.pathname);
           })
           .catch(error => displayError(error));
       }
 
-      // Close button functionality
       document.getElementById('close').addEventListener('click', () => {
-        document.getElementById('textbox-container').style.display = 'none';
+        textboxContainer.classList.add('minimized');
       });
+
+      function maximizeTextbox() {
+        textboxContainer.classList.remove('minimized');
+      }
     </script>
   </body>
 </html>
